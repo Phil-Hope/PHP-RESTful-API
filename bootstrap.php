@@ -2,9 +2,9 @@
 
 require __DIR__.'/vendor/autoload.php';
 use Dotenv\Dotenv;
-use Services\DBModel;
+use Services\Database;
 
 $dotenv = new Dotenv(__DIR__);
 $dotenv->safeLoad();
 
-$pdoConnection = (new DBModel())->connect();
+$pdoConnection = (new Database())->connect();

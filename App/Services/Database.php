@@ -8,10 +8,10 @@ use PDOException;
 require $_SERVER['DOCUMENT_ROOT'].'/bootstrap.php';
 
 /**
- * Class DBModel
+ * Class Database
  * @package Services
  */
-class DBModel {
+class Database {
 
     /**
      * @var PDO
@@ -19,7 +19,7 @@ class DBModel {
     private PDO $dbConnection;
 
     /**
-     * DBModel constructor.
+     * Database constructor.
      */
     public function __construct()
     {

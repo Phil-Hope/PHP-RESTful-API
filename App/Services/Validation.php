@@ -2,13 +2,13 @@
 
 namespace Services;
 
+
 /**
  * Class Validation
  * @package Services
  */
 class Validation
 {
-
     /**
      * @param $input
      * @return bool

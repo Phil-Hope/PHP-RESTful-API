@@ -1,10 +1,10 @@
 <?php
-use Services\DBModel;
+use Services\Database;
 use Controllers\UserController;
 
 require  $_SERVER['DOCUMENT_ROOT'] .'/bootstrap.php';
 session_start();
-$connection = new DBModel();
+$connection = new Database();
 
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");

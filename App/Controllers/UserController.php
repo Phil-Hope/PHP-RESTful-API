@@ -19,7 +19,7 @@ class UserController
 
     /**
      * UserController constructor.
-     * When this class object is instantiated it creates a new DBModel
+     * When this class object is instantiated it creates a new Database
      * And initializes the return PDO object to the local $pdo variable
      * @param PDO $pdo
      * @param mixed $requestMethod
