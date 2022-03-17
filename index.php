@@ -1,10 +1,7 @@
 <?php
 
-use Controllers\EmployerController;
-use Controllers\LoginController;
-use Controllers\RegisterController;
+use Controllers\UserController;
 use Services\Database;
-use Controllers\JobSeekerController;
 
 require  $_SERVER['DOCUMENT_ROOT'] .'/bootstrap.php';
 session_start();
@@ -23,39 +20,12 @@ $requestMethod = $_SERVER["REQUEST_METHOD"];
 
 if (isset($uri)) {
    switch ($uri[1]) {
-       case 'jobSeekers':
+       case 'user':
            $uid = null;
            if (isset($uri[2])) {
                $uid = (string) $uri[2];
            }
-           $jobSeeker = new JobSeekerController($connection->connect(), $requestMethod, $uid);
-           try {
-               $jobSeeker->processRequest();
-           } catch (Exception $e) {
-           }
-           break;
-       case 'register':
-           if (isset($uri[2])) {
-               header("HTTP/1.1 404 Not Found");
-           } else {
-               $register = new RegisterController($connection->connect(), $requestMethod);
-               $register->processRequest();
-           }
-           break;
-       case 'login':
-           if (isset($uri[2])) {
-               header("HTTP/1.1 404 Not Found");
-           } else {
-               $login = new LoginController($connection->connect(), $requestMethod);
-               $login->processRequest();
-           }
-           break;
-       case 'employers':
-           $uid = null;
-           if (isset($uri[2])) {
-               $uid = (string) $uri[2];
-           }
-           $employer = new EmployerController($connection->connect(), $requestMethod, $uid);
+           $employer = new UserController($connection->connect(), $requestMethod, $uid);
            try {
                $employer->processRequest();
            } catch (Exception $e) {

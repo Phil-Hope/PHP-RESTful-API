@@ -3,20 +3,17 @@
 
 namespace Controllers;
 
+
 use Exception;
 use PDO;
 use PDOException;
 use Services\Validation;
 
-/**
- * Class JobSeekerController
- * @package Repository
- */
-class JobSeekerController
+class UserController
 {
     private PDO $pdo;
     private $requestMethod;
-    private ?string $uid;
+    private ?int $uid;
 
     /**
      * JobSeekerController constructor.
@@ -24,9 +21,9 @@ class JobSeekerController
      * And initializes the return PDO object to the local $pdo variable
      * @param PDO $pdo
      * @param mixed $requestMethod
-     * @param string|null $uid
+     * @param int|null $uid
      */
-    public function __construct(PDO $pdo, $requestMethod, ?string $uid)
+    public function __construct(PDO $pdo, $requestMethod, ?int $uid)
     {
         $this->requestMethod = $requestMethod;
         $this->uid = $uid;
@@ -38,61 +35,57 @@ class JobSeekerController
      * then executes the applicable function
      * @throws Exception
      */
-    public function processRequest(): array
+    public function processRequest()
     {
         switch ($this->requestMethod) {
             case 'GET':
                 if ($this->uid) {
-                    $response = $this->fetchJobSeekerById($this->uid);
+                    $response = $this->getUserById($this->uid);
                 } else {
-                    $response = $this->fetchAllJobSeekers();
+                    $response = $this->getAllUsers();
                 }
                 break;
             case 'POST':
-                $response = $this->addNewJobSeeker();
+                $response = $this->addNewUser();
                 break;
             case 'PUT':
-                $response = $this->updateJobSeeker($this->uid);
+                $response = $this->updateUser($this->uid);
                 break;
             case 'DELETE':
-                $response = $this->deleteJobSeeker($this->uid);
+                $response = $this->deleteUser($this->uid);
                 break;
             default:
                 $response = (new Validation())->notFoundResponse();
                 break;
         }
-        $response['status_code_header'] = 'HTTP/1.1 400 Bad Request Error';
-        $response['body'] = json_encode(['message' => 'Request Failed: ']);
-        return $response;
+        header($response['status_code_header']);
+        if ($response['body']) {
+            echo $response['body'];
+        }
     }
 
     /**
-     * @param $uid
+     * @param string $email
      * @return mixed
-     * Checks to make sure that the requested jobseeker data exists
+     * Checks to make sure that the requested users data exists
      *
      */
-    public function find($uid)
+    public function find(string $email)
     {
-
         $query = "
       SELECT
-        first_name, last_name, email, contact_number
+        firstName, lastName, email, contactNumber
       FROM
-        technoworld.jobseeker
-      WHERE uid = uid;
+        sports.users
+      WHERE email = :email;
     ";
+
         try {
             $statement = $this->pdo->prepare($query);
-            $statement->execute(array('uid' => $uid));
-            $response = $statement->fetch(PDO::FETCH_ASSOC);
-            header($response);
-            exit();
+            $statement->execute(array('email' => $email));
+            return $statement->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            $response['status_code_header'] = 'HTTP/1.1 400 Bad Request Error';
-            $response['body'] = json_encode(['message' => 'Request Failed: '.$e->getMessage()]);
-            echo $response;
-            exit();
+            exit($e->getMessage());
         }
     }
 
@@ -100,20 +93,18 @@ class JobSeekerController
      * Fetches all users
      * @return array
      */
-    public function fetchAllJobSeekers(): array
+    public function getAllUsers(): array
     {
         try {
-            $sql = "SELECT * FROM technoworld.jobseeker";
+            $sql = "SELECT * FROM sports.users";
             $stmt = $this->pdo->query($sql);
             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            $response['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
-            $response['body'] = json_encode(['message' => 'Request Failed: '.$e->getMessage()]);
-            return $response;
+            exit($e->getMessage());
         }
-        header('HTTP/1.1 200 OK');
-        echo $response['body'] = json_encode($result);
-        exit();
+        $response['status_code_header'] = 'HTTP/1.1 200 OK';
+        $response['body'] = json_encode($result);
+        return $response;
     }
 
     /**
@@ -122,7 +113,7 @@ class JobSeekerController
      * @return array
      * @throws Exception
      */
-    public function addNewJobSeeker(): array
+    public function addNewUser(): array
     {
         $validate = new Validation();
         $input = (array)json_decode(file_get_contents('php://input'), TRUE);
@@ -130,47 +121,40 @@ class JobSeekerController
             return $validate->unprocessableEntityResponse();
         }
 
-        $sql = "INSERT INTO technoworld.jobseeker (uid, first_name, last_name, date_joined, contact_number, email)
-                     VALUES (:uid, :firstName, :lastName, :dateJoined, :contactNumber, :email)";
-        $uid = uniqid();
-        $email = $validate->inputValidation($input['email']);
-        $contactNumber = $validate->inputValidation($input['contactNumber']);
+        $sql = "INSERT INTO sports.users (firstName, lastName, contactNumber, email)
+                     VALUES (:firstName, :lastName, :contactNumber, :email)";
         $firstName = $validate->inputValidation($input['firstName']);
         $lastName = $validate->inputValidation($input['lastName']);
-        $date = date_create();
-        $dateJoined = date_format($date, 'Y-m-d H:i:s');
+        $contactNumber = $validate->inputValidation($input['contactNumber']);
+        $email = $validate->inputValidation($input['email']);
+
         try {
             $stmt = $this->pdo->prepare($sql);
-            $stmt->bindParam(':uid', $uid);
             $stmt->bindParam(':firstName', $firstName);
             $stmt->bindParam(':lastName', $lastName);
-            $stmt->bindParam(':dateJoined', $dateJoined);
             $stmt->bindParam(':contactNumber', $contactNumber);
             $stmt->bindParam(':email', $email);
             $stmt->execute();
         } catch (PDOException $e) {
-            $response['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
-            $response['body'] = json_encode(['message' => 'Create JobSeeker Failed: '.$e->getMessage()]);
-            return $response;
+            exit($e->getMessage());
         }
-
         $response['status_code_header'] = 'HTTP/1.1 201 Created';
         $response['body'] = json_encode(['message' => 'User Created']);
         return $response;
     }
 
     /**
-     * Fetches a jobSeeker by string $uid
+     * Fetches a user by int $userID
      *
-     * @param $uid
+     * @param string $email
      * @return array
      */
-    public function fetchJobSeekerById($uid): array
+    public function getUserById(string $email): array
     {
         try {
-            $sql = "SELECT * FROM technoworld.jobseeker WHERE uid = :uid";
+            $sql = "SELECT * FROM sports.users WHERE email = :email";
             $stmt = $this->pdo->prepare($sql);
-            $stmt->bindParam(':uid', $uid);
+            $stmt->bindParam(':email', $email);
             $stmt->execute();
             $data = $stmt->fetch();
             return [
@@ -178,20 +162,18 @@ class JobSeekerController
                 'data' => $data
             ];
         } catch (PDOException $e) {
-            $response['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
-            $response['body'] = json_encode(['message' => 'Request Failed: '.$e->getMessage()]);
-            return $response;
+            throw new PDOException($e->getMessage());
         }
     }
 
     /**
-     * @param $userID
+     * @param string $email
      * @return array
      */
-    public function updateJobSeeker($userID): array
+    public function updateUser(string $email): array
     {
         $validate = new Validation();
-        $result = $this->find($userID);
+        $result = $this->find($email);
 
         if(! $result) {
             return $validate->notFoundResponse();
@@ -204,27 +186,25 @@ class JobSeekerController
         }
         $firstName = $validate->inputValidation($input['firstName']);
         $lastName = $validate->inputValidation($input['lastName']);
-        $email = $validate->inputValidation($input['email']);
         $contactNumber = $validate->inputValidation($input['contactNumber']);
-        $uid = $validate->inputValidation($input['uid']);
+        $email = $validate->inputValidation($input['email']);
+
         try {
-            $sql = 'UPDATE technoworld.jobseeker
-                     SET first_name= :firstName,
-                         last_name= :lastName,
-                         contact_number= :contactNumber,
-                         email= :email
-                     WHERE uid= :uid';
+            $sql = 'UPDATE sports.users
+                     SET firstName = :firstName,
+                         lastName = :lastName,
+                         contactNumber = :contactNumber
+                     WHERE email = :email';
+
             $stmt = $this->pdo->prepare($sql);
-            $stmt->bindParam(':uid', $uid);
             $stmt->bindParam(':firstName', $firstName);
             $stmt->bindParam(':lastName', $lastName);
-            $stmt->bindParam(':email', $email);
             $stmt->bindParam(':contactNumber', $contactNumber);
+            $stmt->bindParam(':email', $email);
             $stmt->execute();
+
         } catch (PDOException $e) {
-            $response['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
-            $response['body'] = json_encode(['message' => 'Request Failed: '.$e->getMessage()]);
-            return $response;
+            exit($e->getMessage());
         }
         $response['status_code_header'] = 'HTTP/1.1 200 OK';
         $response['body'] = json_encode(['message' => 'User Updated!']);
@@ -232,24 +212,22 @@ class JobSeekerController
     }
 
     /**
-     * @param $uid
+     * @param string $email
      * @return array
      */
-    public function deleteJobSeeker($uid): array
+    public function deleteUser(string $email): array
     {
-        $result = $this->find($uid);
+        $result = $this->find($email);
         if(! $result) {
             (new Validation())->notFoundResponse();
         }
         try {
-            $sql = 'DELETE FROM technoworld.jobseeker WHERE uid = :uid';
+            $sql = 'DELETE FROM sports.users WHERE email = :email';
             $stmt = $this->pdo->prepare($sql);
-            $stmt->bindParam(':userID', $uid);
+            $stmt->bindParam(':email', $email);
             $stmt->execute();
         } catch (PDOException $e) {
-            $response['status_code_header'] = 'HTTP/1.1 500 Internal Server Error';
-            $response['body'] = json_encode(['message' => 'Request Failed: '.$e->getMessage()]);
-            return $response;
+            exit($e->getMessage());
         }
         $response['status_code_header'] = 'HTTP/1.1 200 OK';
         $response['body'] = json_encode(['message' => 'User Deleted!']);
